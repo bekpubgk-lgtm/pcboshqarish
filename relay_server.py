@@ -156,12 +156,15 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
     def js(self, o, code=200):
-        b = json.dumps(o).encode()
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(b)))
-        self.end_headers()
-        self.wfile.write(b)
+        try:
+            b = json.dumps(o).encode()
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
     def rd(self):
         try:
             n = int(self.headers.get("Content-Length", 0))
@@ -171,42 +174,41 @@ class H(BaseHTTPRequestHandler):
     def chk(self, d):
         return d.get("code") == PAIR_CODE
     def do_GET(self):
-        u = urlparse(self.path)
-        if u.path == "/":
-            b = (P1 + P2).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(b)))
-            self.end_headers()
-            self.wfile.write(b)
-            return
-        q = parse_qs(u.query)
-        if (q.get("code") or [""])[0] != PAIR_CODE:
-            self.js({"err": "bad code"}, 403)
-            return
-        if u.path == "/poll":
-            who = (q.get("who") or [""])[0]
-            since = int((q.get("since") or ["0"])[0])
-            end = time.time() + 18
-            msgs = []
-            while True:
-                msgs = [m for m in inbox.get(who, []) if m["id"] > since]
-                if msgs or time.time() > end:
-                    break
-                time.sleep(0.4)
-            self.js({"msgs": msgs})
-            return
-        if u.path == "/img":
-            if not latest_img["data"]:
-                self.js({"err": "no img yet"}, 404)
+        try:
+            u = urlparse(self.path)
+            if u.path == "/":
+                b = (P1 + P2).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(b)))
+                self.end_headers()
+                self.wfile.write(b)
                 return
-            self.send_response(200)
-            self.send_header("Content-Type", "image/jpeg")
-            self.send_header("Content-Length", str(len(latest_img["data"])))
-            self.end_headers()
-            self.wfile.write(latest_img["data"])
-            return
-        self.js({}, 404)
+            q = parse_qs(u.query)
+            if (q.get("code") or [""])[0] != PAIR_CODE:
+                self.js({"err": "bad code"}, 403)
+                return
+            if u.path == "/poll":
+                who = (q.get("who") or [""])[0]
+                since = int((q.get("since") or ["0"])[0])
+                msgs = [m for m in inbox.get(who, []) if m["id"] > since]
+                self.js({"msgs": msgs})
+                return
+            if u.path == "/img":
+                if not latest_img["data"]:
+                    self.js({"err": "no img yet"}, 404)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Content-Length", str(len(latest_img["data"])))
+                self.end_headers()
+                self.wfile.write(latest_img["data"])
+                return
+            self.js({}, 404)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception:
+            pass
     def do_POST(self):
         d = self.rd()
         if not self.chk(d):
