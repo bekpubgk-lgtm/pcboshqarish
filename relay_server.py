@@ -1,4 +1,4 @@
-﻿"""Relay v2 - brauzer UI bilan. PC agent + telefon brauzeri shu yerga ulanadi."""
+"""Relay v2 - brauzer UI bilan. PC agent + telefon brauzeri shu yerga ulanadi."""
 import json, time, base64, os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
@@ -46,7 +46,6 @@ button:active{background:#666}.row{display:flex;gap:6px;padding:6px 8px}
 <div class='row'><button id='shut'>Ochirish</button><button id='reb'>Qayta</button><button id='ref'>Ekran</button></div>
 <script>
 var SRV='',CODE='';
-</script></body></html>
 """
 P2 = """function st(t){document.getElementById('st').textContent=t}
 function req(path,body,ms){
@@ -78,7 +77,7 @@ function poll(){
 }
 function login(){
  var s=(document.getElementById('srv').value||document.getElementById('srv2').value||'').trim();
- if(s){SRV=s.replace(/\/$/,'');}else{SRV=window.location.origin;}
+ if(s){SRV=s;if(SRV.slice(-1)==='/'){SRV=SRV.slice(0,-1);}}else{SRV=window.location.origin;}
  CODE=(document.getElementById('pin').value||document.getElementById('pin2').value||'').trim();
  if(!CODE){alert('Kodni kiriting');return;}
  document.getElementById('srv2').value=SRV;document.getElementById('pin2').value=CODE;
