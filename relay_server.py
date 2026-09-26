@@ -50,10 +50,18 @@ var SRV='',CODE='';
 """
 P2 = """function st(t){document.getElementById('st').textContent=t}
 function req(path,body,ms){
- return fetch(SRV+path,{method:body?'POST':'GET',
-  headers:{'Content-Type':'application/json'},
-  body:body?JSON.stringify(body):undefined,
-  signal:AbortSignal.timeout(ms||15000)});}
+ ms=ms||15000;
+ var url=(path.charAt(0)==='/'&&(SRV===''||SRV===window.location.origin))?path:(SRV+path);
+ return new Promise(function(resolve,reject){
+  var done=false;
+  var timer=setTimeout(function(){
+   if(!done){done=true;reject(new Error('timeout'));}},ms);
+  fetch(url,{method:body?'POST':'GET',
+   headers:{'Content-Type':'application/json'},
+   body:body?JSON.stringify(body):undefined})
+  .then(function(r){if(!done){done=true;clearTimeout(timer);resolve(r);}})
+  .catch(function(e){if(!done){done=true;clearTimeout(timer);reject(e);}});
+ });}
 var pid=0;
 function cmd(c){
  req('/send',{code:CODE,from:'phone',to:'pc',cmd:c},10000).catch(function(e){st('xato: '+e)});
@@ -69,15 +77,16 @@ function poll(){
  }).catch(function(){setTimeout(poll,2000)});
 }
 function login(){
- SRV=(document.getElementById('srv').value||document.getElementById('srv2').value||'').trim().replace(/\\/$/,'');
- CODE=document.getElementById('pin').value||document.getElementById('pin2').value||'';
- if(!SRV||!CODE){alert('Server + kod kiriting');return;}
+ var s=(document.getElementById('srv').value||document.getElementById('srv2').value||'').trim();
+ if(s){SRV=s.replace(/\/$/,'');}else{SRV=window.location.origin;}
+ CODE=(document.getElementById('pin').value||document.getElementById('pin2').value||'').trim();
+ if(!CODE){alert('Kodni kiriting');return;}
  document.getElementById('srv2').value=SRV;document.getElementById('pin2').value=CODE;
  req('/send',{code:CODE,from:'phone',to:'pc',cmd:{t:'ping'}},10000)
- .then(function(r){return r.json()}).then(function(){
+ .then(function(r){if(!r.ok){throw new Error('kod xato');}return r.json();}).then(function(){
   document.getElementById('lock').style.display='none';
   st('ulandi: '+SRV);poll();shot();
- }).catch(function(){alert('Ulanmadi: server/kod tekshiring')});
+ }).catch(function(e){alert('Ulanmadi: '+e.message)});
 }
 function move(dx,dy){cmd({t:'mouse',a:'move',dx:Math.round(dx*3),dy:Math.round(dy*3)})}
 var lx=0,ly=0,lastTap=0;
