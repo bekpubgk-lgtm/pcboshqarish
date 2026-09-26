@@ -1,0 +1,2 @@
+# Render bepul web-service uchun qo'shimcha paket shart emas (faqat stdlib).
+# Bo'sh qoldirildi - ataylab.
